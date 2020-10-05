@@ -63,35 +63,46 @@ function main() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vbuf);
     const vertices = [0, 0, 1, 0, 0, 1, 1, 1];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    render(gl, shadProgram, vbuf);
+    beginRender(gl, shadProgram, vbuf);
 }
 
-function render(gl, progshad, buff) {
+function beginRender(gl, progshad, buff) {
 
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     let model = mat4.create();
-    const proj = mat4.create();
-    setInterval(() => {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    let proj = mat4.create();
 
-        mat4.perspective(proj, 45 * 3.141592653589 / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.1, 100);
+    let last = 0;
 
-        model = mat4.create();
+    function render(now) {
+        let dt = now - last;
+        last = now;
+        draw(gl, dt, model, proj, buff, progshad);
+        requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+}
+var rotation = 0;
 
-        mat4.translate(model, model, [0, 0, -10]);
-        mat4.rotate(model, model, Date.now(), [0, 1, 0]);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buff);
-        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(0);
-        gl.useProgram(progshad);
-        gl.uniformMatrix4fv(gl.getUniformLocation(progshad, "uProjectionMatrix"), false, proj);
-        gl.uniformMatrix4fv(gl.getUniformLocation(progshad, "uModelViewMatrix"), false, model);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }, 100);
+function draw(gl, dt, model, proj, buff, progshad) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    mat4.perspective(proj, 45 * 3.141592653589 / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.1, 100);
+
+    model = mat4.create();
+
+    mat4.translate(model, model, [0, 0, -10]);
+    mat4.rotate(model, model, rotation += dt * 0.01, [0, 1, 0]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buff);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(0);
+    gl.useProgram(progshad);
+    gl.uniformMatrix4fv(gl.getUniformLocation(progshad, "uProjectionMatrix"), false, proj);
+    gl.uniformMatrix4fv(gl.getUniformLocation(progshad, "uModelViewMatrix"), false, model);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
 main();
