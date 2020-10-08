@@ -1,13 +1,17 @@
 const vsSource = `#version 300 es
 layout (location = 0) in vec4 aVertexPosition;
 out vec4 vPos;
+out float vx;
+out float vy;
 uniform float xshift;
 void main() {
     vPos = aVertexPosition;
     vPos.y /= xshift;
     vPos.x /= xshift;
-    vPos.x -= 0.72;
-    vPos.y -= 0.202;
+    // vx /= xshift;
+    vPos.x -= 0.72; // -0.265; // 0.72;
+    vPos.y -= 0.202; // -0.0035;// 0.202;
+
     gl_Position = aVertexPosition;
 }
 `;
@@ -18,17 +22,22 @@ precision mediump float;
 in vec4 vPos;
 out vec4 FragColor;
 void main() {
-    vec2 z = vPos.xy;
+    // vec2 z = vPos.xy;
+    float za = vPos.x;
+    float zb = vPos.y;
     int i = 0;
-    int lim = 200;
+    int lim = 300;
     for (; i < lim; ++i) {
-        z = vec2(z.x*z.x-z.y*z.y+vPos.x, 2.0f*z.x*z.y+vPos.y);
-        if (distance(z, vec2(0.0f,0.0f)) > 2.0f) {
+        float temp = za;
+        za = za*za-zb*zb+vPos.x;
+        zb = 2.0*temp*zb+vPos.y;
+        // z = vec2(z.x*z.x-z.y*z.y+vPos.x, 2.0*z.x*z.y+vPos.y);
+        if (za+zb > 4.0) {
             break;
         }
     }
     if (i == lim) {
-        FragColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
         FragColor = vec4(float(i)/float(lim), float(i)/float(lim), float(i)/float(lim), 1.0f)*vec4(0.1f, 0.9f, 0.9f, 1.0f);
     }
@@ -86,7 +95,7 @@ function main() {
 }
 
 function beginRender(gl, progshad, buff) {
-
+    // console.log(gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.LOW_FLOAT));
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -95,6 +104,7 @@ function beginRender(gl, progshad, buff) {
     let proj = mat4.create();
 
     let last = 0;
+    gl.uniform1f(gl.getUniformLocation(progshad, "xshift"), rotation /= 1e2);
 
     function render(now) {
         let dt = now - last;
@@ -105,14 +115,15 @@ function beginRender(gl, progshad, buff) {
     requestAnimationFrame(render);
 }
 var rotation = 1;
+var track = 0; // precision error begins at 600
+var zoomfac = 1.04;
 
 function draw(gl, dt, model, proj, buff, progshad) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
     gl.bindBuffer(gl.ARRAY_BUFFER, buff);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(0);
-    gl.uniform1f(gl.getUniformLocation(progshad, "xshift"), rotation *= 1.02);
+    gl.uniform1f(gl.getUniformLocation(progshad, "xshift"), rotation *= zoomfac);
     gl.useProgram(progshad);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
